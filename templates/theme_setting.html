@@ -1,0 +1,166 @@
+{#
+  主题设置（/theme/setting 新建，/theme/setting/:tid 编辑）。
+
+  ★★ 这张表单里**绝对不能出现 name="tid"**。
+     service/layers/base.ts 组装 args 的顺序是 `{ domainId, ...params, ...query, ...body }` ——
+     body 排在最后，会**覆盖**路径参数。加一个 name="tid" 的隐藏域，编辑页的 tid
+     就会被表单里的值（比如空串）冲掉，prepare() 直接查不到主题。
+     所以 tid 只从 URL 上来，提交后由服务端 302 回 /theme/setting/<tid>。
+
+  ★ 三个玻璃开关用「只有一个 name、value="1"」的复选框，**不勾就不提交这个字段**。
+     服务端一律按 `=== '1'` 判（见 index.ts postSave），所以"不勾 = 关闭"天然成立。
+     反过来如果用 `<input type="hidden" name="x" value="0">` 配同名的 checkbox，
+     提交出去会变成 x=0&x=1 两个值 → 服务端拿到的是数组，判断全错。
+
+  ★ 表单是**原生的**（不经过任何 AJAX 劫持）：ui-default 4.58.4 里搜不到全局 submit
+     拦截，浏览器会带 multipart 原生提交，服务端回 302，浏览器跳转。
+#}
+{% set page_name = "theme_setting" %}
+{% extends "layout/basic.html" %}
+{% block content %}
+{% include "partials/theme_style.html" %}
+<div class="row"><div class="columns">
+  <div class="section">
+    <div class="section__header">
+      <div class="cf-theme-head">
+        <h1 class="section__title grow">
+          {% if isNew %}{{ _('新建主题') }}{% else %}{{ _('主题设置') }}{% endif %}
+        </h1>
+        {% if not isNew %}
+          <span class="cf-theme-count">#{{ tid }}</span>
+          <span class="cf-theme-state cf-theme-state--{{ status }}">{{ statusText }}</span>
+        {% endif %}
+        <a href="{{ baseUrl }}{{ url('theme_store') }}" class="rounded button">{{ _('主题广场') }}</a>
+      </div>
+    </div>
+    <div class="section__body">
+      {% if rejectReason %}
+        <div class="cf-theme-reason">{{ _('驳回理由') }}：{{ rejectReason }}</div>
+      {% endif %}
+      {% if notice %}
+        <p class="cf-theme-form__hint" style="margin-top: 0;">{{ notice }}</p>
+      {% endif %}
+
+      <div class="cf-theme-cols">
+        <!-- ============ 左：设置表单 ============ -->
+        <form method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="operation" value="save">
+
+          <div class="cf-theme-form__row">
+            <label class="cf-theme-form__label" for="cf-theme-name">{{ _('主题名称') }}</label>
+            <input id="cf-theme-name" type="text" name="name" maxlength="60" required
+                   value="{{ name }}" placeholder="{{ _('给它起个名字') }}">
+          </div>
+
+          <div class="cf-theme-form__row">
+            <label class="cf-theme-form__label" for="cf-theme-bgfile">{{ _('自定义背景图片') }}</label>
+
+            {% if canUpload %}
+              <input id="cf-theme-bgfile" type="file" name="bgfile"
+                     accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
+              <p class="cf-theme-form__hint">
+                {{ _('支持 png / jpg / webp / gif / avif，单个文件不超过') }} {{ maxUploadMB }} MB。
+                {{ _('这张图会铺满整个页面，同时作为液态玻璃的取样纹理。') }}
+              </p>
+            {% else %}
+              <p class="cf-theme-form__hint" style="margin-top: 0;">{{ _('你没有上传文件的权限，只能填图片链接。') }}</p>
+            {% endif %}
+
+            <div style="margin-top: 10px;">
+              <input type="text" name="background" maxlength="500" value="{{ background }}"
+                     placeholder="{{ _('或者直接填一个 https:// 开头的图片链接') }}">
+            </div>
+
+            {% if hasBg %}
+              <label class="cf-theme-form__hint" style="display: block; margin-top: 10px; cursor: pointer;">
+                <input type="checkbox" name="clearBackground" value="1">
+                {{ _('清空背景图') }}
+                {% if bgIsFile %}（{{ _('当前背景是上传的图片') }}）{% else %}（{{ _('当前背景是外链图片') }}）{% endif %}
+              </label>
+            {% endif %}
+          </div>
+
+          <div class="cf-theme-form__row">
+            <span class="cf-theme-form__label">{{ _('液态玻璃效果') }}</span>
+
+            <label class="cf-theme-switch">
+              <input type="checkbox" name="glassSide" value="1"{% if glassSide %} checked{% endif %}>
+              <span>
+                <span class="cf-theme-switch__t">{{ _('侧栏液态玻璃') }}</span>
+                <span class="cf-theme-switch__d">{{ _('左侧导航栏。关掉就退回普通的半透明底色。') }}</span>
+              </span>
+            </label>
+
+            <label class="cf-theme-switch">
+              <input type="checkbox" name="glassBar" value="1"{% if glassBar %} checked{% endif %}>
+              <span>
+                <span class="cf-theme-switch__t">{{ _('顶栏液态玻璃') }}</span>
+                <span class="cf-theme-switch__d">{{ _('页面顶部那条面包屑栏。') }}</span>
+              </span>
+            </label>
+
+            <label class="cf-theme-switch">
+              <input type="checkbox" name="glassLocal" value="1"{% if glassLocal %} checked{% endif %}>
+              <span>
+                <span class="cf-theme-switch__t">{{ _('局部液态玻璃') }}</span>
+                <span class="cf-theme-switch__d">{{ _('内容区的卡片和按钮，比如比赛信息卡、讨论区回复按钮。') }}</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="cf-theme-actions">
+            <button type="submit" class="rounded primary button">
+              {% if isNew %}{{ _('创建并保存') }}{% else %}{{ _('保存') }}{% endif %}
+            </button>
+            <span class="cf-theme-form__hint" style="margin: 0;">
+              {{ _('已用') }} {{ ownCount }} / {{ maxThemes }} {{ _('个主题') }}
+            </span>
+          </div>
+        </form>
+
+        <!-- ============ 右：预览 + 其它操作 ============ -->
+        <div>
+          <div class="cf-theme-panel">
+            <span class="cf-theme-form__label">{{ _('背景预览') }}</span>
+            {% if bgPreview %}
+              <div class="cf-theme-preview" style="background-image:url({{ bgPreview }})"></div>
+            {% else %}
+              <div class="cf-theme-thumb cf-theme-thumb--none" style="height: 150px; margin: 0;">
+                {{ _('还没有背景图') }}
+              </div>
+            {% endif %}
+            <p class="cf-theme-form__hint">{{ _('保存之后回到这个页面就能看到实际效果。') }}</p>
+          </div>
+
+          {% if not isNew %}
+            <div class="cf-theme-panel" style="margin-top: 14px;">
+              <span class="cf-theme-form__label">{{ _('其它操作') }}</span>
+
+              {% if canSubmit %}
+                {# ⚠ 独立表单，绝不能嵌在上面的保存表单里 —— HTML 不允许 form 嵌套 #}
+                <form method="POST">
+                  <input type="hidden" name="operation" value="submit">
+                  <button type="submit" class="rounded primary button">{{ _('提交审核') }}</button>
+                </form>
+                <p class="cf-theme-form__hint">{{ _('提交之后 MOD 审核通过，才会出现在主题广场。') }}</p>
+              {% elif status == 'pending' %}
+                <p class="cf-theme-form__hint" style="margin-top: 0;">{{ _('正在审核中，请耐心等待。') }}</p>
+              {% elif status == 'approved' %}
+                <p class="cf-theme-form__hint" style="margin-top: 0;">{{ _('已经通过审核，广场上所有人都能看到。') }}</p>
+              {% endif %}
+
+              <div class="cf-theme-danger">
+                <form method="POST" data-confirm="{{ _('确定要删除这个主题吗？删除后无法恢复。') }}"
+                      onsubmit="return confirm(this.getAttribute('data-confirm'))">
+                  <input type="hidden" name="operation" value="delete">
+                  <button type="submit" class="rounded button">{{ _('删除主题') }}</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

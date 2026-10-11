@@ -1,0 +1,95 @@
+{# 主题商店三个页面共用的样式。放在 partial 里避免三份重复。 #}
+<style>
+  .cf-theme-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cf-theme-head .grow { flex: 1 1 auto; min-width: 0; }
+  .cf-theme-count { color: #6b7a8d; font-size: 13px; }
+
+  .cf-theme-grid { display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+  .cf-theme-card { position: relative; border-radius: 12px; padding: 14px 15px;
+    background: rgba(255, 255, 255, .55);
+    box-shadow: inset 0 0 0 1px rgba(47, 64, 86, .12); }
+  .cf-theme-card--active { box-shadow: inset 0 0 0 2px #0b57c9; }
+
+  .cf-theme-card__top { display: flex; align-items: baseline; gap: 8px; }
+  .cf-theme-card__name { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600;
+    color: #12283f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-theme-card__by { font-size: 12px; color: #6b7a8d; margin-top: 2px; }
+
+  /* 背景图缩略：没设背景就画一条灰斜纹，一眼能看出"这个主题只改了玻璃开关" */
+  .cf-theme-thumb { height: 92px; margin: 10px 0; border-radius: 9px; overflow: hidden;
+    background: #eef2f7 center center / cover no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(47, 64, 86, .12); }
+  .cf-theme-thumb--none {
+    background-image: repeating-linear-gradient(45deg,
+      rgba(47, 64, 86, .07) 0 8px, rgba(47, 64, 86, 0) 8px 16px);
+    display: flex; align-items: center; justify-content: center;
+    color: #8695a8; font-size: 12px; }
+
+  .cf-theme-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .cf-theme-tag { font-size: 11px; line-height: 1.6; padding: 0 7px; border-radius: 999px;
+    color: #55677d; background: rgba(47, 64, 86, .09); white-space: nowrap; }
+  .cf-theme-tag--on { color: #0b57c9; background: rgba(11, 87, 201, .13); }
+
+  .cf-theme-state { font-size: 11px; line-height: 1.6; padding: 0 7px; border-radius: 999px;
+    white-space: nowrap; }
+  .cf-theme-state--draft { color: #55677d; background: rgba(47, 64, 86, .11); }
+  .cf-theme-state--pending { color: #8a6100; background: rgba(214, 158, 0, .16); }
+  .cf-theme-state--approved { color: #0b7a3f; background: rgba(11, 122, 63, .14); }
+  .cf-theme-state--rejected { color: #b02a2a; background: rgba(176, 42, 42, .13); }
+
+  .cf-theme-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .cf-theme-acts form { display: inline-flex; margin: 0; }
+  .cf-theme-acts .button,
+  .cf-theme-acts button { margin: 0; }
+
+  /* 管理页：驳回理由输入行 */
+  .cf-theme-rejectrow { display: flex; gap: 6px; margin-top: 10px; }
+  .cf-theme-rejectrow input[type="text"] { flex: 1 1 auto; min-width: 0; margin: 0; }
+  .cf-theme-rejectrow .button,
+  .cf-theme-rejectrow button { margin: 0; flex: 0 0 auto; }
+
+  .cf-theme-tid { color: #8695a8; font-variant-numeric: tabular-nums; }
+
+  .cf-theme-reason { margin: 0 0 10px; padding: 6px 9px; border-radius: 8px; font-size: 12px;
+    color: #b02a2a; background: rgba(176, 42, 42, .08); }
+
+  .cf-theme-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cf-theme-tabs a { font-size: 13px; padding: 4px 11px; border-radius: 999px;
+    color: #55677d; text-decoration: none; background: rgba(47, 64, 86, .08); }
+  .cf-theme-tabs a.on { color: #0b57c9; background: rgba(11, 87, 201, .14); font-weight: 600; }
+
+  .cf-theme-form__row { margin-bottom: 16px; }
+  .cf-theme-form__label { display: block; font-weight: 600; color: #12283f; margin-bottom: 6px; }
+  .cf-theme-form__hint { color: #6b7a8d; font-size: 12px; margin-top: 5px; }
+  .cf-theme-form input[type="text"] { width: 100%; }
+  .cf-theme-radios { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .cf-theme-preview { height: 150px; border-radius: 10px; margin-top: 10px;
+    background: #eef2f7 center center / cover no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(47, 64, 86, .12); }
+
+  /* 设置页：左表单 / 右预览两栏 */
+  .cf-theme-cols { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) {
+    .cf-theme-cols { grid-template-columns: minmax(0, 1fr) 300px; }
+  }
+  .cf-theme-panel { border-radius: 12px; padding: 14px 15px;
+    background: rgba(255, 255, 255, .55);
+    box-shadow: inset 0 0 0 1px rgba(47, 64, 86, .12); }
+  .cf-theme-panel .cf-theme-preview { margin-top: 0; }
+
+  .cf-theme-switch { display: flex; gap: 10px; align-items: flex-start;
+    padding: 9px 0; cursor: pointer; }
+  .cf-theme-switch + .cf-theme-switch { border-top: 1px solid rgba(47, 64, 86, .1); }
+  .cf-theme-switch > input { flex: 0 0 auto; margin: 3px 0 0; }
+  .cf-theme-switch__t { display: block; font-weight: 600; color: #12283f; }
+  .cf-theme-switch__d { display: block; color: #6b7a8d; font-size: 12px; margin-top: 2px; }
+
+  .cf-theme-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+  .cf-theme-actions .button,
+  .cf-theme-actions button { margin: 0; }
+
+  .cf-theme-danger { margin-top: 14px; padding-top: 14px;
+    border-top: 1px dashed rgba(47, 64, 86, .18); }
+</style>

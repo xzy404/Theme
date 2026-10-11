@@ -1,0 +1,102 @@
+{% set page_name = "theme_store" %}
+{% extends "layout/basic.html" %}
+{% import "components/nothing.html" as nothing with context %}
+{% import "components/paginator.html" as paginator with context %}
+{% block content %}
+{% include "partials/theme_style.html" %}
+<div class="row"><div class="columns">
+  <div class="section">
+    <div class="section__header">
+      <div class="cf-theme-head">
+        <h1 class="section__title grow">{{ _('主题广场') }}</h1>
+        <span class="cf-theme-count">{{ count }} {{ _('个主题') }}</span>
+        {% if canCreate %}
+          <a href="{{ baseUrl }}{{ url('theme_setting') }}" class="rounded primary button">{{ _('新建主题') }}</a>
+        {% endif %}
+        {% if isMod %}
+          <a href="{{ baseUrl }}{{ url('theme_store_admin') }}" class="rounded button">{{ _('主题管理') }}</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="section__body">
+      {% if not loggedIn %}
+        <p class="cf-theme-form__hint">{{ _('登录之后才可以提交、应用主题。') }}</p>
+      {% endif %}
+
+      {% if rows|length == 0 %}
+        {{ nothing.render('这里还没有主题。你可以做第一个。') }}
+      {% else %}
+        <div class="cf-theme-grid">
+          {% for row in rows %}
+            <div class="cf-theme-card{% if row.active %} cf-theme-card--active{% endif %}">
+              <div class="cf-theme-card__top">
+                <span class="cf-theme-card__name" title="{{ row.name }}">{{ row.name }}</span>
+                <span class="cf-theme-state cf-theme-state--{{ row.status }}">{{ row.statusText }}</span>
+              </div>
+              <div class="cf-theme-card__by">
+                @{{ row.ownerName }}
+                {% if row.mine %} · {{ _('我的') }}{% endif %}
+                {% if row.active %} · <b>{{ _('正在使用') }}</b>{% endif %}
+              </div>
+
+              {% if row.bgPreview %}
+                <div class="cf-theme-thumb" style="background-image:url({{ row.bgPreview }})"></div>
+              {% else %}
+                <div class="cf-theme-thumb cf-theme-thumb--none">{{ _('没有自定义背景图') }}</div>
+              {% endif %}
+
+              {% if row.rejectReason %}
+                <div class="cf-theme-reason">{{ _('驳回理由') }}：{{ row.rejectReason }}</div>
+              {% endif %}
+
+              <div class="cf-theme-tags">
+                <span class="cf-theme-tag{% if row.glassSide %} cf-theme-tag--on{% endif %}">{{ _('侧栏玻璃') }}</span>
+                <span class="cf-theme-tag{% if row.glassBar %} cf-theme-tag--on{% endif %}">{{ _('顶栏玻璃') }}</span>
+                <span class="cf-theme-tag{% if row.glassLocal %} cf-theme-tag--on{% endif %}">{{ _('局部玻璃') }}</span>
+              </div>
+
+              <div class="cf-theme-acts">
+                {% if row.active %}
+                  <form method="POST">
+                    <input type="hidden" name="operation" value="unapply">
+                    <button type="submit" class="rounded button">{{ _('取消应用') }}</button>
+                  </form>
+                {% elif row.canApply %}
+                  <form method="POST">
+                    <input type="hidden" name="operation" value="apply">
+                    <input type="hidden" name="tid" value="{{ row.tid }}">
+                    <button type="submit" class="rounded primary button">{{ _('应用') }}</button>
+                  </form>
+                {% endif %}
+
+                {% if row.canSubmit %}
+                  <form method="POST">
+                    <input type="hidden" name="operation" value="submit">
+                    <input type="hidden" name="tid" value="{{ row.tid }}">
+                    <button type="submit" class="rounded button">{{ _('提交审核') }}</button>
+                  </form>
+                {% endif %}
+
+                {% if row.canEdit %}
+                  <a href="{{ baseUrl }}{{ url('theme_setting_tid', {tid: row.tid}) }}" class="rounded button">{{ _('进一步设置') }}</a>
+                {% endif %}
+
+                {% if row.canDelete %}
+                  <form method="POST" data-confirm="{{ _('确定要删除这个主题吗？') }}"
+                        onsubmit="return confirm(this.getAttribute('data-confirm'))">
+                    <input type="hidden" name="operation" value="delete">
+                    <input type="hidden" name="tid" value="{{ row.tid }}">
+                    <button type="submit" class="rounded button">{{ _('删除') }}</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {{ paginator.render(page, numPages) }}
+      {% endif %}
+    </div>
+  </div>
+</div></div>
+{% endblock %}

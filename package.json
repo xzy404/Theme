@@ -1,0 +1,7 @@
+{
+  "name": "theme",
+  "version": "1.0.0",
+  "description": "CatchFish OJ — 主题商店：主题广场 / 主题审核 / 主题设置（背景图 + 液态玻璃开关）",
+  "keywords": ["hydro-addon", "theme", "glass"],
+  "main": "index.ts"
+}

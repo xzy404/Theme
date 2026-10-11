@@ -1,0 +1,117 @@
+{#
+  主题管理（/theme/store/admin）—— 仅当前域的 MOD 可访问。
+
+  ⚠ 权限是服务端判的（ThemeAdminHandler.prepare → PermissionError(PERM_MOD_BADGE)），
+    模板里不要重复判，也不要指望"藏起按钮"能挡住人。
+
+  ⚠ 每个操作都是独立的 <form method="POST">，靠 <input name="operation"> 分发到
+    postApprove / postReject / postUnpublish / postDelete。
+    表单不带 action → 提交到当前 URL（/theme/store/admin），路径里没有 :tid，
+    所以 body 里的 name="tid" 是安全的（只有 /theme/setting/:tid 那个页面才不能有 name="tid"）。
+#}
+{% set page_name = "theme_store_admin" %}
+{% extends "layout/basic.html" %}
+{% import "components/nothing.html" as nothing with context %}
+{% import "components/paginator.html" as paginator with context %}
+{% block content %}
+{% include "partials/theme_style.html" %}
+<div class="row"><div class="columns">
+  <div class="section">
+    <div class="section__header">
+      <div class="cf-theme-head">
+        <h1 class="section__title grow">{{ _('主题管理') }}</h1>
+        <span class="cf-theme-count">{{ totalText }}</span>
+        <a href="{{ baseUrl }}{{ url('theme_store') }}" class="rounded button">{{ _('主题广场') }}</a>
+      </div>
+    </div>
+    <div class="section__body">
+      <p class="cf-theme-form__hint" style="margin-top: 0;">
+        {{ _('审核用户提交的主题：通过之后它会出现在主题广场；下架会撤回到「未提交」，但用户自己仍然能继续用。') }}
+      </p>
+
+      <div class="cf-theme-tabs" style="margin-bottom: 16px;">
+        {% for t in tabs %}<a href="{{ baseUrl }}{{ url('theme_store_admin', {tab: t.key}) }}"{% if t.on %} class="on"{% endif %}>{{ t.text }} · {{ t.count }}</a>{% endfor %}
+      </div>
+
+      {% if rows|length == 0 %}
+        {{ nothing.render('这个分类下暂时没有主题。') }}
+      {% else %}
+        <div class="cf-theme-grid">
+          {% for row in rows %}
+          <div class="cf-theme-card">
+            <div class="cf-theme-card__top">
+              <span class="cf-theme-card__name" title="{{ row.name }}">{{ row.name }}</span>
+              <span class="cf-theme-state cf-theme-state--{{ row.status }}">{{ row.statusText }}</span>
+            </div>
+            <div class="cf-theme-card__by">
+              <a href="{{ baseUrl }}/user/{{ row.owner }}">@{{ row.ownerName }}</a>
+              · <span class="cf-theme-tid">#{{ row.tid }}</span>
+              {% if row.updateAtText %} · {{ row.updateAtText }}{% endif %}
+            </div>
+
+            {% if row.bgPreview %}
+              <a class="cf-theme-thumb" href="{{ row.bgPreview }}" target="_blank" rel="noopener noreferrer"
+                 style="background-image:url({{ row.bgPreview }})" title="{{ _('点击查看原始背景图') }}"></a>
+            {% else %}
+              <div class="cf-theme-thumb cf-theme-thumb--none">{{ _('没有自定义背景图') }}</div>
+            {% endif %}
+
+            {% if row.status == 'pending' and row.background == '' %}
+              <div class="cf-theme-form__hint" style="margin: 0 0 10px;">{{ _('这个主题没有背景图，只改了液态玻璃开关。') }}</div>
+            {% endif %}
+
+            {% if row.rejectReason %}
+              <div class="cf-theme-reason">{{ _('上次驳回理由') }}：{{ row.rejectReason }}</div>
+            {% endif %}
+
+            <div class="cf-theme-tags">
+              <span class="cf-theme-tag{% if row.glassSide %} cf-theme-tag--on{% endif %}">{{ _('侧栏玻璃') }}</span>
+              <span class="cf-theme-tag{% if row.glassBar %} cf-theme-tag--on{% endif %}">{{ _('顶栏玻璃') }}</span>
+              <span class="cf-theme-tag{% if row.glassLocal %} cf-theme-tag--on{% endif %}">{{ _('局部玻璃') }}</span>
+            </div>
+
+            <div class="cf-theme-acts">
+              {% if row.canApprove %}
+              <form method="POST">
+                <input type="hidden" name="operation" value="approve">
+                <input type="hidden" name="tid" value="{{ row.tid }}">
+                <button type="submit" class="rounded primary button">{{ _('通过') }}</button>
+              </form>
+              {% endif %}
+
+              <a href="{{ baseUrl }}{{ url('theme_setting_tid', {tid: row.tid}) }}" class="rounded button">{{ _('查看 / 编辑') }}</a>
+
+              {% if row.status == 'approved' %}
+              <form method="POST">
+                <input type="hidden" name="operation" value="unpublish">
+                <input type="hidden" name="tid" value="{{ row.tid }}">
+                <button type="submit" class="rounded button">{{ _('下架') }}</button>
+              </form>
+              {% endif %}
+
+              <form method="POST" data-confirm="{{ _('确定要删除这个主题吗？删除后无法恢复。') }}"
+                    onsubmit="return confirm(this.getAttribute('data-confirm'))">
+                <input type="hidden" name="operation" value="delete">
+                <input type="hidden" name="tid" value="{{ row.tid }}">
+                <button type="submit" class="rounded button">{{ _('删除') }}</button>
+              </form>
+            </div>
+
+            {% if row.canReject %}
+            <form method="POST" class="cf-theme-rejectrow">
+              <input type="hidden" name="operation" value="reject">
+              <input type="hidden" name="tid" value="{{ row.tid }}">
+              <input type="text" name="reason" maxlength="300" placeholder="{{ _('驳回理由（会展示给作者）') }}">
+              <button type="submit" class="rounded button">{{ _('驳回') }}</button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {{ paginator.render(page, numPages, pageQs) }}
+      {% endif %}
+    </div>
+  </div>
+</div></div>
+{% endblock %}
